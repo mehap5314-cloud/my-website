@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام رصد درجات الطلاب</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 30px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        :root {
+            --bg-body: #ffffff;
+            --bg-container: #fafafa;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --text-main: #333333;
+            --text-secondary: #555555;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 20px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        body.dark-mode {
+            --bg-body: #121212;
+            --bg-container: #1e1e1e;
+            --bg-card: #2d2d2d;
+            --bg-input: #383838;
+            --text-main: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --border-color: #444444;
+            --shadow: 0 2px 20px rgba(0,0,0,0.4);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg-container);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .header {
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+            color: var(--text-main);
+        }
+        .theme-toggle:hover {
+            background: var(--border-color);
+            transform: rotate(15deg);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .stat-value { font-size: 36px; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { font-size: 14px; opacity: 0.9; }
+
+        .input-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            display: inline-block;
+        }
+
+        .upload-section {
+            background: #e3f2fd;
+            border: 2px dashed #2196f3;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .upload-section.dark {
+            background: #1e3a5f;
+            border-color: #64b5f6;
+        }
+        .upload-section h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .upload-section.dark h3 {
+            color: #64b5f6;
+        }
+        .upload-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #2196f3;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .file-input-label:hover {
+            background: #1976d2;
+            transform: translateY(-2px);
+        }
+        .btn-clear-db {
+            padding: 12px 25px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-clear-db:hover {
+            background: #f57c00;
+        }
+        .upload-info {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+        .upload-section.dark .upload-info {
+            color: #b0b0b0;
+        }
+        .upload-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        .upload-status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+        .upload-status.error {
+            background: #ffebee;
+            color: #c62828;
+            display: block;
+        }
+
+        .filter-section {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-section input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background: var(--bg-input);
+            color: var(--text-main);
+        }
+        .filter-section input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn-filter {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-filter:hover {
+            background: #5568d3;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label {
+            font-weight: bold;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-group input, .form-group select {
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-input);
+            color: var(--text-main);
+            transition: border-color 0.3s, background 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-group input.auto-filled {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            animation: pulse 0.5s;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        .subject-box {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            border: 1px solid var(--border-color);
+        }
+        .subject-box:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+        .subject-box.main { border-top: 4px solid #667eea; }
+        .subject-box.extra { border-top: 4px solid #ffc107; }
+        .subject-box.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+            background: #f5f5f5;
+        }
+        .subject-name {
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            font-size: 15px;
+        }
+        
+        .subject-input-wrapper { position: relative; margin-bottom: 10px; }
+        .subject-input-wrapper input {
+            width: 100%;
+            padding: 12px 50px 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            font-weight: bold;
+            color: #667eea;
+            background: var(--bg-input);
+        }
+        .max-grade-text {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            margin-top: 8px;
+            background: var(--bg-input);
+            color: var(--text-main);
+        }
+        .status-select.ghayab {
+            border-color: #dc3545;
+            color: #dc3545;
+            background: #fff5f5;
+        }
+        .status-select.maafi {
+            border-color: #28a745;
+            color: #28a745;
+            background: #f0fff4;
+        }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 30px 0;
+        }
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; transform: translateY(-2px); }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; transform: translateY(-2px); }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-warning:hover { background: #f57c00; transform: translateY(-2px); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 5px; }
+
+        .table-container { overflow-x: auto; margin-top: 20px; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--bg-card); }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 14px 10px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        td {
+            padding: 12px 10px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+        tr:hover { background: rgba(0,0,0,0.05); }
+        .total-cell { font-weight: bold; color: #667eea; font-size: 14px; }
+        .percentage-cell { font-weight: bold; color: #28a745; font-size: 15px; }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-success { background: #28a745; color: white; }
+        .badge-danger { background: #dc3545; color: white; }
+        .ghayab-text { color: #dc3545; font-weight: bold; }
+        .maafi-text { color: #28a745; font-weight: bold; }
+        
+        .error-msg {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-right: 4px solid #c62828;
+            display: none;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-right: 4px solid #2196f3;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+        .dark .info-box {
+            background: #1e3a5f;
+            border-color: #64b5f6;
+            color: #64b5f6;
+        }
+
+        .db-count {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span>📊 نظام رصد درجات الطلاب</span>
+            <button class="theme-toggle" onclick="toggleTheme()" title="تغيير المظهر">🌙</button>
+        </div>
+
+        <div class="stats-row" id="statsSection" style="display:none;">
+            <div class="stat-card"><div class="stat-value" id="totalStudents">0</div><div class="stat-label">إجمالي الطلاب</div></div>
+            <div class="stat-card"><div class="stat-value" id="avgPercentage">0%</div><div class="stat-label">متوسط النسبة</div></div>
+            <div class="stat-card"><div class="stat-value" id="successRate">0%</div><div class="stat-label">نسبة النجاح</div></div>
+            <div class="stat-card"><div class="stat-value" id="maxTotalDisplay">380</div><div class="stat-label">أقصى مجموع</div></div>
+        </div>
+
+        <div class="input-card">
+            <div class="card-title">بيانات الطالب</div>
+            
+            <div class="upload-section" id="uploadSection">
+                <h3>📥 رفع ملف الطلاب (Excel) <span class="db-count" id="dbCount">0 طالب محمل</span></h3>
+                
+                <div class="upload-buttons">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+                        <span class="file-input-label">📁 إضافة ملف Excel جديد</span>
+                    </div>
+                    <button class="btn-clear-db" onclick="clearDatabase()">🗑️ مسح البيانات المحملة</button>
+                </div>
+                
+                <div class="upload-info">
+                    يمكن رفع ملفات متعددة - البيانات ستُضاف للبيانات الموجودة<br>
+                    يجب أن يحتوي الملف على أعمدة: رقم الجلوس | اسم الطالب | النوعية | الشعبة
+                </div>
+                <div id="uploadStatus" class="upload-status"></div>
+            </div>
+            
+            <div class="filter-section">
+                <input type="text" id="filterInput" placeholder="🔍 ابحث برقم الجلوس أو اسم الطالب...">
+                <button class="btn-filter" onclick="filterStudents()">بحث</button>
+                <button class="btn-filter" onclick="clearFilter()" style="background: #757575;">عرض الكل</button>
+            </div>
+            
+            <div id="errorMsg" class="error-msg"></div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>رقم الجلوس</label>
+                    <input type="number" id="seatNumber" placeholder="أدخل رقم الجلوس" oninput="autoFillStudent()">
+                </div>
+                <div class="form-group">
+                    <label>اسم الطالب</label>
+                    <input type="text" id="studentName" placeholder="أدخل الاسم يدوياً أو أدخل رقم الجلوس للملء التلقائي">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>النوعية</label>
+                    <select id="studentType">
+                        <option value="نظامي">نظامي</option>
+                        <option value="خدمات">خدمات</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الشعبة</label>
+                    <select id="branch" onchange="updateBranchSubjects()">
+                        <option value="علمي">علمي</option>
+                        <option value="أدبي">أدبي</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="info-box" id="branchInfo">
+                الشعبة: علمي - المواد المفعلة فقط تدخل في الحساب
+            </div>
+
+            <div class="section-title">📚 المواد داخل المجموع</div>
+            <div class="subjects-grid" id="mainSubjectsGrid"></div>
+
+            <div class="divider"></div>
+            <div class="section-title">📖 المواد خارج المجموع</div>
+            <div class="subjects-grid" id="extraSubjectsGrid"></div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="addStudent()" id="addBtn">➕ إضافة طالب</button>
+                <button class="btn btn-warning" onclick="updateStudent()" id="updateBtn" style="display:none;">💾 تحديث البيانات</button>
+                <button class="btn btn-success" onclick="exportToExcel()">📥 تصدير Excel</button>
+                <button class="btn btn-danger" onclick="clearAll()">🗑️ مسح الكل</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+        let editIndex = -1;
+        let studentsDatabase = {};
+        let filteredStudents = [];
+
+        const allMainSubjects = [
+            { id: 'arabic', name: 'اللغة العربية', max: 80, branch: 'both' },
+            { id: 'first_lang', name: 'اللغة الأولى', max: 60, branch: 'both' },
+            { id: 'history', name: 'التاريخ', max: 60, branch: 'both' },
+            { id: 'chemistry', name: 'الكيمياء', max: 60, branch: 'علمي' },
+            { id: 'physics', name: 'الفيزياء', max: 60, branch: 'علمي' },
+            { id: 'math_sci', name: 'رياضيات علمي', max: 60, branch: 'علمي' },
+            { id: 'geography', name: 'الجغرافيا', max: 60, branch: 'أدبي' },
+            { id: 'psychology', name: 'علم النفس', max: 60, branch: 'أدبي' },
+            { id: 'math_lit', name: 'رياضيات أدبي', max: 60, branch: 'أدبي' }
+        ];
+
+        const extraSubjects = [
+            { id: 'second_lang', name: 'اللغة الثانية', max: 40 },
+            { id: 'religion', name: 'التربية الدينية', max: 40 },
+            { id: 'national', name: 'التربية الوطنية', max: 40 },
+            { id: 'activities', name: 'أنشطة ومهنية', max: 15 },
+            { id: 'sport', name: 'تربية رياضية', max: 20 },
+            { id: 'military', name: 'عسكرية', max: 50 }
+        ];
+
+        window.onload = function() {
+            loadTheme();
+            const saved = localStorage.getItem('gradesSystemData');
+            if (saved) { 
+                try {
+                    students = JSON.parse(saved); 
+                    renderTable(); 
+                } catch(e) { console.error(e); }
+            }
+            updateBranchSubjects();
+        };
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    if (jsonData.length < 2) {
+                        showUploadStatus('❌ الملف فارغ أو لا يحتوي على بيانات', 'error');
+                        return;
+                    }
+
+                    const headers = jsonData[0].map(h => String(h).trim().toLowerCase());
+                    
+                    const seatCol = findColumnIndex(headers, ['رقم الجلوس', 'الجلوس', 'رقم', 'seat']);
+                    const nameCol = findColumnIndex(headers, ['اسم الطالب', 'الاسم', 'اسم', 'student', 'name']);
+                    const typeCol = findColumnIndex(headers, ['النوعية', 'النوع', 'type']);
+                    const branchCol = findColumnIndex(headers, ['الشعبة', 'شعبة', 'branch']);
+
+                    if (seatCol === -1 || nameCol === -1) {
+                        showUploadStatus('❌ الملف يجب أن يحتوي على عمود "رقم الجلوس" وعمود "اسم الطالب"', 'error');
+                        return;
+                    }
+
+                    let count = 0;
+                    let updated = 0;
+                    
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row[seatCol]) continue;
+                        
+                        const seatNum = String(row[seatCol]).trim();
+                        if (!seatNum) continue;
+
+                        if (studentsDatabase[seatNum]) {
+                            updated++;
+                        } else {
+                            count++;
+                        }
+
+                        studentsDatabase[seatNum] = {
+                            name: row[nameCol] ? String(row[nameCol]).trim() : '',
+                            type: typeCol !== -1 && row[typeCol] ? String(row[typeCol]).trim() : 'نظامي',
+                            branch: branchCol !== -1 && row[branchCol] ? String(row[branchCol]).trim() : 'علمي'
+                        };
+                    }
+
+                    updateDbCount();
+                    showUploadStatus(`✅ تم إضافة/تحديث ${count + updated} طالب (${count} جديد، ${updated} تم تحديثهم)`, 'success');
+                    event.target.value = '';
+                    
+                } catch (error) {
+                    console.error('Error reading file:', error);
+                    showUploadStatus('❌ خطأ في قراءة الملف: ' + error.message, 'error');
+                }
+            };
+            reader.onerror = function() {
+                showUploadStatus('❌ خطأ في قراءة الملف', 'error');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function findColumnIndex(headers, possibleNames) {
+            for (const name of possibleNames) {
+                const index = headers.findIndex(h => h.includes(name));
+                if (index !== -1) return index;
+            }
+            return -1;
+        }
+
+        function showUploadStatus(message, type) {
+            const statusEl = document.getElementById('uploadStatus');
+            statusEl.textContent = message;
+            statusEl.className = 'upload-status ' + type;
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function updateDbCount() {
+            const count = Object.keys(studentsDatabase).length;
+            document.getElementById('dbCount').textContent = count + ' طالب محمل';
+        }
+
+        function clearDatabase() {
+            if (Object.keys(studentsDatabase).length === 0) {
+                showUploadStatus('ℹ️ لا توجد بيانات محملة لمسحها', 'success');
+                return;
+            }
+            
+            if (confirm('هل أنت متأكد من مسح جميع البيانات المحملة من Excel؟')) {
+                studentsDatabase = {};
+                updateDbCount();
+                document.getElementById('seatNumber').value = '';
+                document.getElementById('studentName').value = '';
+                document.getElementById('studentName').classList.remove('auto-filled');
+                showUploadStatus('✅ تم مسح جميع البيانات المحملة', 'success');
+            }
+        }
+
+        function autoFillStudent() {
+            const seatNumber = document.getElementById('seatNumber').value.trim();
+            
+            if (!seatNumber || !studentsDatabase[seatNumber]) {
+                document.getElementById('studentName').classList.remove('auto-filled');
+                return;
+            }
+
+            const studentData = studentsDatabase[seatNumber];
+            
+            document.getElementById('studentName').value = studentData.name;
+            document.getElementById('studentName').classList.add('auto-filled');
+            
+            if (studentData.type) {
+                document.getElementById('studentType').value = studentData.type;
+            }
+            
+            if (studentData.branch) {
+                document.getElementById('branch').value = studentData.branch;
+                updateBranchSubjects();
+            }
+
+            setTimeout(() => {
+                document.getElementById('studentName').classList.remove('auto-filled');
+            }, 1000);
+        }
+
+        function filterStudents() {
+            const filterValue = document.getElementById('filterInput').value.trim().toLowerCase();
+            
+            if (!filterValue) {
+                renderTable();
+                return;
+            }
+
+            filteredStudents = students.filter(s => 
+                s.seatNumber.includes(filterValue) || 
+                s.studentName.toLowerCase().includes(filterValue)
+            );
+
+            renderTable(filteredStudents);
+        }
+
+        function clearFilter() {
+            document.getElementById('filterInput').value = '';
+            filteredStudents = [];
+            renderTable();
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            const uploadSection = document.getElementById('uploadSection');
+            
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                uploadSection.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                btn.innerHTML = '🌙';
+            } else {
+                body.classList.add('dark-mode');
+                uploadSection.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                btn.innerHTML = '☀️';
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const btn = document.querySelector('.theme-toggle');
+            const uploadSection = document.getElementById('uploadSection');
+            
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                uploadSection.classList.add('dark');
+                btn.innerHTML = '☀️';
+            }
+        }
+
+        function showError(msg) {
+            const errorDiv = document.getElementById('errorMsg');
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+            setTimeout(() => { errorDiv.style.display = 'none'; }, 3000);
+        }
+
+        function updateBranchSubjects() {
+            const branch = document.getElementById('branch').value;
+            const mainGrid = document.getElementById('mainSubjectsGrid');
+            const extraGrid = document.getElementById('extraSubjectsGrid');
+            const infoBox = document.getElementById('branchInfo');
+
+            infoBox.innerHTML = `الشعبة: <strong>${branch}</strong> - المواد المفعلة فقط تدخل في الحساب`;
+
+            let maxTotal = 0;
+            allMainSubjects.forEach(sub => {
+                if (sub.branch === 'both' || sub.branch === branch) {
+                    maxTotal += sub.max;
+                }
+            });
+            document.getElementById('maxTotalDisplay').textContent = maxTotal;
+
+            mainGrid.innerHTML = '';
+            allMainSubjects.forEach(sub => {
+                const isEnabled = (sub.branch === 'both' || sub.branch === branch);
+                
+                mainGrid.innerHTML += `
+                    <div class="subject-box main ${isEnabled ? '' : 'disabled'}">
+                        <div class="subject-name">${sub.name}</div>
+                        <div class="subject-input-wrapper">
+                            <input type="number" id="g_${sub.id}" class="main-grade" 
+                                   min="0" max="${sub.max}" onchange="handleMainGradeChange('${sub.id}')"
+                                   ${isEnabled ? '' : 'disabled'}>
+                            <span class="max-grade-text">من ${sub.max}</span>
+                        </div>
+                        <select id="status_${sub.id}" class="status-select" onchange="handleMainStatusChange('${sub.id}')"
+                                ${isEnabled ? '' : 'disabled'}>
+                            <option value="normal">عادي</option>
+                            <option value="ghayab" class="ghayab-text">غياب</option>
+                        </select>
+                    </div>
+                `;
+            });
+
+            extraGrid.innerHTML = '';
+            extraSubjects.forEach(sub => {
+                extraGrid.innerHTML += `
+                    <div class="subject-box extra">
+                        <div class="subject-name">${sub.name}</div>
+                        <div class="subject-input-wrapper">
+                            <input type="number" id="eg_${sub.id}" class="extra-grade" min="0" max="${sub.max}" onchange="handleExtraGradeChange('${sub.id}')">
+                            <span class="max-grade-text">من ${sub.max}</span>
+                        </div>
+                        <select id="eg_status_${sub.id}" class="status-select" onchange="handleExtraStatusChange('${sub.id}')">
+                            <option value="normal">عادي</option>
+                            <option value="ghayab" class="ghayab-text">غياب</option>
+                            <option value="maafi" class="maafi-text">معفي</option>
+                        </select>
+                    </div>
+                `;
+            });
+        }
+
+        function handleMainGradeChange(subjectId) {
+            const statusSelect = document.getElementById(`status_${subjectId}`);
+            if (document.getElementById(`g_${subjectId}`).value !== '') {
+                statusSelect.value = 'normal';
+                statusSelect.className = 'status-select';
+            }
+        }
+
+        function handleMainStatusChange(subjectId) {
+            const statusSelect = document.getElementById(`status_${subjectId}`);
+            const gradeInput = document.getElementById(`g_${subjectId}`);
+            
+            if (statusSelect.value === 'ghayab') {
+                gradeInput.value = '';
+                gradeInput.disabled = true;
+                statusSelect.className = 'status-select ghayab';
+            } else {
+                gradeInput.disabled = false;
+                statusSelect.className = 'status-select';
+            }
+        }
+
+        function handleExtraGradeChange(subjectId) {
+            const statusSelect = document.getElementById(`eg_status_${subjectId}`);
+            if (document.getElementById(`eg_${subjectId}`).value !== '') {
+                statusSelect.value = 'normal';
+                statusSelect.className = 'status-select';
+            }
+        }
+
+        function handleExtraStatusChange(subjectId) {
+            const statusSelect = document.getElementById(`eg_status_${subjectId}`);
+            const gradeInput = document.getElementById(`eg_${subjectId}`);
+            
+            if (statusSelect.value === 'ghayab' || statusSelect.value === 'maafi') {
+                gradeInput.value = '';
+                gradeInput.disabled = true;
+                statusSelect.className = statusSelect.value === 'ghayab' ? 'status-select ghayab' : 'status-select maafi';
+            } else {
+                gradeInput.disabled = false;
+                statusSelect.className = 'status-select';
+            }
+        }
+
+        function addStudent() {
+            document.getElementById('errorMsg').style.display = 'none';
+            
+            const seatNumber = document.getElementById('seatNumber').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            const studentType = document.getElementById('studentType').value;
+            const branch = document.getElementById('branch').value;
+
+            if (!seatNumber) { showError('⚠️ الرجاء إدخال رقم الجلوس'); return; }
+            if (!studentName) { showError('⚠️ الرجاء إدخال اسم الطالب'); return; }
+
+            const mainGrades = {};
+            const mainStatuses = {};
+            let total = 0, maxTotal = 0;
+
+            allMainSubjects.forEach(sub => {
+                if (sub.branch === 'both' || sub.branch === branch) {
+                    const statusSelect = document.getElementById(`status_${sub.id}`);
+                    const gradeInput = document.getElementById(`g_${sub.id}`);
+                    
+                    if (!statusSelect || !gradeInput) return;
+                    
+                    const status = statusSelect.value || 'normal';
+                    mainStatuses[sub.id] = status;
+                    
+                    if (status === 'ghayab') {
+                        mainGrades[sub.id] = null;
+                    } else {
+                        const val = parseFloat(gradeInput.value) || 0;
+                        mainGrades[sub.id] = val;
+                        total += val;
+                        maxTotal += sub.max;
+                    }
+                }
+            });
+
+            const extraGrades = {};
+            extraSubjects.forEach(sub => {
+                const statusSelect = document.getElementById(`eg_status_${sub.id}`);
+                const gradeInput = document.getElementById(`eg_${sub.id}`);
+                const status = statusSelect.value || 'normal';
+                
+                if (status === 'normal') {
+                    extraGrades[sub.id] = parseFloat(gradeInput.value) || 0;
+                } else {
+                    extraGrades[sub.id] = status;
+                }
+            });
+
+            if (maxTotal === 0) { showError('⚠️ الرجاء إدخال درجات المواد'); return; }
+
+            const percentage = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(2) : 0;
+            const status = percentage >= 50 ? 'ناجح' : 'راسب';
+
+            const student = {
+                seatNumber, studentName, studentType, branch, mainGrades, mainStatuses, 
+                extraGrades, total, maxTotal, percentage, status,
+                date: new Date().toISOString()
+            };
+
+            students.push(student);
+            saveData();
+            renderTable();
+            clearInputs();
+            showError('✅ تم إضافة الطالب بنجاح');
+        }
+
+        function updateStudent() {
+            if (editIndex === -1) return;
+            
+            document.getElementById('errorMsg').style.display = 'none';
+            
+            const seatNumber = document.getElementById('seatNumber').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            const studentType = document.getElementById('studentType').value;
+            const branch = document.getElementById('branch').value;
+
+            if (!seatNumber) { showError('⚠️ الرجاء إدخال رقم الجلوس'); return; }
+            if (!studentName) { showError('⚠️ الرجاء إدخال اسم الطالب'); return; }
+
+            const mainGrades = {};
+            const mainStatuses = {};
+            let total = 0, maxTotal = 0;
+
+            allMainSubjects.forEach(sub => {
+                if (sub.branch === 'both' || sub.branch === branch) {
+                    const statusSelect = document.getElementById(`status_${sub.id}`);
+                    const gradeInput = document.getElementById(`g_${sub.id}`);
+                    
+                    if (!statusSelect || !gradeInput) return;
+                    
+                    const status = statusSelect.value || 'normal';
+                    mainStatuses[sub.id] = status;
+                    
+                    if (status === 'ghayab') {
+                        mainGrades[sub.id] = null;
+                    } else {
+                        const val = parseFloat(gradeInput.value) || 0;
+                        mainGrades[sub.id] = val;
+                        total += val;
+                        maxTotal += sub.max;
+                    }
+                }
+            });
+
+            const extraGrades = {};
+            extraSubjects.forEach(sub => {
+                const statusSelect = document.getElementById(`eg_status_${sub.id}`);
+                const gradeInput = document.getElementById(`eg_${sub.id}`);
+                const status = statusSelect.value || 'normal';
+                
+                if (status === 'normal') {
+                    extraGrades[sub.id] = parseFloat(gradeInput.value) || 0;
+                } else {
+                    extraGrades[sub.id] = status;
+                }
+            });
+
+            if (maxTotal === 0) { showError('⚠️ الرجاء إدخال درجات المواد'); return; }
+
+            const percentage = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(2) : 0;
+            const status = percentage >= 50 ? 'ناجح' : 'راسب';
+
+            students[editIndex] = {
+                seatNumber, studentName, studentType, branch, mainGrades, mainStatuses, 
+                extraGrades, total, maxTotal, percentage, status,
+                date: new Date().toISOString()
+            };
+
+            saveData();
+            renderTable(filteredStudents.length > 0 ? filteredStudents : undefined);
+            clearInputs();
+            showError('✅ تم تحديث بيانات الطالب بنجاح');
+        }
+
+        function editStudent(index) {
+            const student = filteredStudents.length > 0 ? 
+                students.find(s => s.seatNumber === filteredStudents[index].seatNumber) : 
+                students[index];
+            
+            if (!student) return;
+            
+            editIndex = index;
+            
+            document.getElementById('seatNumber').value = student.seatNumber;
+            document.getElementById('studentName').value = student.studentName;
+            document.getElementById('studentType').value = student.studentType || 'نظامي';
+            document.getElementById('branch').value = student.branch;
+            
+            updateBranchSubjects();
+            
+            setTimeout(() => {
+                allMainSubjects.forEach(sub => {
+                    if (sub.branch === 'both' || sub.branch === student.branch) {
+                        const gradeInput = document.getElementById(`g_${sub.id}`);
+                        const statusSelect = document.getElementById(`status_${sub.id}`);
+                        
+                        if (student.mainStatuses[sub.id] === 'ghayab') {
+                            statusSelect.value = 'ghayab';
+                            statusSelect.className = 'status-select ghayab';
+                            gradeInput.value = '';
+                            gradeInput.disabled = true;
+                        } else {
+                            gradeInput.value = student.mainGrades[sub.id] || 0;
+                            statusSelect.value = 'normal';
+                            statusSelect.className = 'status-select';
+                        }
+                    }
+                });
+                
+                extraSubjects.forEach(sub => {
+                    const gradeInput = document.getElementById(`eg_${sub.id}`);
+                    const statusSelect = document.getElementById(`eg_status_${sub.id}`);
+                    const val = student.extraGrades ? student.extraGrades[sub.id] : null;
+                    
+                    if (val === 'ghayab') {
+                        statusSelect.value = 'ghayab';
+                        statusSelect.className = 'status-select ghayab';
+                        gradeInput.value = '';
+                        gradeInput.disabled = true;
+                    } else if (val === 'maafi') {
+                        statusSelect.value = 'maafi';
+                        statusSelect.className = 'status-select maafi';
+                        gradeInput.value = '';
+                        gradeInput.disabled = true;
+                    } else {
+                        gradeInput.value = val || 0;
+                        statusSelect.value = 'normal';
+                        statusSelect.className = 'status-select';
+                    }
+                });
+            }, 100);
+            
+            document.getElementById('addBtn').style.display = 'none';
+            document.getElementById('updateBtn').style.display = 'inline-flex';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderTable(dataToRender = null) {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            const displayData = dataToRender || (filteredStudents.length > 0 ? filteredStudents : students);
+            
+            // بناء رأس الجدول - المواد الأساسية حسب الشعبة الحالية
+            let headerHTML = '<tr><th>م</th><th>الجلوس</th><th>الاسم</th><th>النوعية</th><th>الشعبة</th>';
+            
+            allMainSubjects.forEach(sub => {
+                if (sub.branch === 'both' || sub.branch === document.getElementById('branch').value) {
+                    headerHTML += `<th>${sub.name}<br><small>(${sub.max})</small></th>`;
+                }
+            });
+            
+            headerHTML += '<th>المجموع</th><th>النسبة %</th><th>الحالة</th>';
+            
+            // ✅ إضافة مواد خارج المجموع - تظهر دائماً لكل الطلاب
+            extraSubjects.forEach(sub => {
+                headerHTML += `<th>${sub.name}</th>`;
+            });
+            
+            headerHTML += '<th>تعديل</th><th>حذف</th></tr>';
+            thead.innerHTML = headerHTML;
+
+            tbody.innerHTML = '';
+            displayData.forEach((s, i) => {
+                const originalIndex = students.findIndex(st => st.seatNumber === s.seatNumber);
+                
+                let rowHTML = `<tr>
+                    <td>${i + 1}</td>
+                    <td>${s.seatNumber}</td>
+                    <td>${s.studentName}</td>
+                    <td>${s.studentType || 'نظامي'}</td>
+                    <td>${s.branch}</td>`;
+
+                // عرض المواد الأساسية حسب شعبة الطالب
+                allMainSubjects.forEach(sub => {
+                    if (sub.branch === 'both' || sub.branch === s.branch) {
+                        if (s.mainStatuses && s.mainStatuses[sub.id] === 'ghayab') {
+                            rowHTML += `<td class="ghayab-text">غياب</td>`;
+                        } else {
+                            rowHTML += `<td>${s.mainGrades[sub.id] || 0}</td>`;
+                        }
+                    }
+                });
+
+                rowHTML += `
+                    <td class="total-cell">${s.total}/${s.maxTotal}</td>
+                    <td class="percentage-cell">${s.percentage}%</td>
+                    <td><span class="badge ${s.status === 'ناجح' ? 'badge-success' : 'badge-danger'}">${s.status}</span></td>`;
+
+                // ✅ عرض المواد خارج المجموع - تظهر لكل الطلاب بغض النظر عن الشعبة
+                extraSubjects.forEach(sub => {
+                    if (s.extraGrades) {
+                        const val = s.extraGrades[sub.id];
+                        if (val === 'ghayab') {
+                            rowHTML += `<td class="ghayab-text">غياب</td>`;
+                        } else if (val === 'maafi') {
+                            rowHTML += `<td class="maafi-text">معفي</td>`;
+                        } else {
+                            rowHTML += `<td>${val || 0}</td>`;
+                        }
+                    } else {
+                        rowHTML += `<td>0</td>`;
+                    }
+                });
+
+                rowHTML += `<td><button class="btn btn-warning btn-sm" onclick="editStudent(${i})">✏️ تعديل</button></td>`;
+                rowHTML += `<td><button class="btn btn-danger btn-sm" onclick="deleteStudent(${originalIndex})">🗑️ حذف</button></td></tr>`;
+                tbody.innerHTML += rowHTML;
+            });
+
+            updateStats();
+        }
+
+        function deleteStudent(index) {
+            if (confirm('هل أنت متأكد من حذف هذا الطالب؟')) {
+                students.splice(index, 1);
+                saveData();
+                if (filteredStudents.length > 0) {
+                    filterStudents();
+                } else {
+                    renderTable();
+                }
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById('seatNumber').value = '';
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentName').classList.remove('auto-filled');
+            document.getElementById('studentType').value = 'نظامي';
+            document.querySelectorAll('input[type="number"]').forEach(el => {
+                if (!el.disabled) el.value = '';
+            });
+            document.querySelectorAll('.status-select').forEach(el => {
+                if (!el.disabled) {
+                    el.value = 'normal';
+                    el.className = 'status-select';
+                }
+            });
+            editIndex = -1;
+            document.getElementById('addBtn').style.display = 'inline-flex';
+            document.getElementById('updateBtn').style.display = 'none';
+        }
+
+        function clearAll() {
+            if (confirm('هل أنت متأكد من مسح جميع البيانات؟')) {
+                students = [];
+                saveData();
+                renderTable();
+                clearInputs();
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('gradesSystemData', JSON.stringify(students));
+            } catch (e) { showError('حدث خطأ في حفظ البيانات'); }
+        }
+
+        function updateStats() {
+            document.getElementById('statsSection').style.display = 'grid';
+            const displayCount = filteredStudents.length > 0 ? filteredStudents.length : students.length;
+            document.getElementById('totalStudents').textContent = displayCount;
+            
+            const dataToUse = filteredStudents.length > 0 ? filteredStudents : students;
+            
+            if (dataToUse.length > 0) {
+                const avg = dataToUse.reduce((a, s) => a + parseFloat(s.percentage), 0) / dataToUse.length;
+                document.getElementById('avgPercentage').textContent = avg.toFixed(1) + '%';
+                const suc = dataToUse.filter(s => s.status === 'ناجح').length;
+                document.getElementById('successRate').textContent = ((suc / dataToUse.length) * 100).toFixed(1) + '%';
+            }
+        }
+
+        function exportToExcel() {
+            if (!students.length) { showError('⚠️ لا توجد بيانات للتصدير'); return; }
+            const data = students.map((s, i) => {
+                const row = {
+                    'م': i + 1, 'رقم الجلوس': s.seatNumber, 'الاسم': s.studentName,
+                    'النوعية': s.studentType || 'نظامي', 'الشعبة': s.branch,
+                };
+                
+                allMainSubjects.forEach(sub => {
+                    if (sub.branch === 'both' || sub.branch === s.branch) {
+                        if (s.mainStatuses && s.mainStatuses[sub.id] === 'ghayab') {
+                            row[sub.name] = 'غياب';
+                        } else {
+                            row[sub.name] = s.mainGrades[sub.id] || 0;
+                        }
+                    }
+                });
+                
+                row['المجموع'] = s.total;
+                row['من'] = s.maxTotal;
+                row['النسبة %'] = s.percentage + '%';
+                row['الحالة'] = s.status;
+                
+                extraSubjects.forEach(sub => {
+                    if (s.extraGrades) {
+                        const val = s.extraGrades[sub.id];
+                        if (val === 'ghayab') {
+                            row[sub.name] = 'غياب';
+                        } else if (val === 'maafi') {
+                            row[sub.name] = 'معفي';
+                        } else {
+                            row[sub.name] = val || 0;
+                        }
+                    } else {
+                        row[sub.name] = 0;
+                    }
+                });
+                
+                return row;
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'النتائج');
+            XLSX.writeFile(wb, `نتائج_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        document.querySelectorAll('input[type="number"]').forEach(inp => {
+            inp.addEventListener('input', function () {
+                if (this.value < 0) this.value = 0;
+                const max = parseInt(this.max);
+                if (this.value > max) this.value = max;
+            });
+        });
+
+        document.getElementById('filterInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                filterStudents();
+            }
+        });
+    </script>
+</body>
+<script>
+  // 1. منع الزر الأيمن للفأرة
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    alert("عذراً، الزر الأيمن معطل لحماية المحتوى.");
+  });
+
+  // 2. منع اختصار Ctrl+U واختصارات أخرى
+  document.addEventListener('keydown', function(e) {
+    // منع Ctrl+U
+    if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      alert("عذراً، لا يمكنك عرض مصدر الصفحة.");
+      return false;
+    }
+    
+    // إضافي: منع Ctrl+Shift+I (لأدوات المطور)
+    if (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I')) {
+      e.preventDefault();
+      return false;
+    }
+
+    // إضافي: منع F12 (لأدوات المطور)
+    if (e.key === 'F12') {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
+</html>
